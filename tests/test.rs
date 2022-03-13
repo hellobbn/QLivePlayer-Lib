@@ -1,7 +1,13 @@
 use log::*;
 use std::{
-    collections::{HashMap, LinkedList},
-    sync::{Arc, Mutex},
+    collections::{
+        HashMap,
+        LinkedList,
+    },
+    sync::{
+        Arc,
+        Mutex,
+    },
 };
 use tokio::runtime::Builder;
 
@@ -14,6 +20,7 @@ struct TestUrl {
     huya_live_url: String,
     youtube_live_url: String,
     twitch_live_url: String,
+    cc_live_url: String,
 }
 impl TestUrl {
     pub fn new() -> Self {
@@ -24,6 +31,7 @@ impl TestUrl {
             huya_live_url: "https://www.huya.com/825801".to_owned(),
             youtube_live_url: "https://www.youtube.com/watch?v=5XDDUMAl1sE".to_owned(),
             twitch_live_url: "https://www.twitch.tv/okcode".to_owned(),
+            cc_live_url: "https://cc.163.com/361433".to_owned(),
         }
     }
 }
@@ -95,6 +103,15 @@ fn test_twitch_live() {
             "{:?}",
             b.get_live(u.twitch_live_url.as_ref()).await.unwrap()
         );
+    });
+}
+
+#[test]
+fn test_cc_live() {
+    Builder::new_current_thread().enable_all().build().unwrap().block_on(async move {
+        let u = TestUrl::new();
+        let b = qliveplayer_lib::streamfinder::cc::CC::new();
+        println!("{:?}", b.get_live(u.cc_live_url.as_ref()).await.unwrap());
     });
 }
 
@@ -264,6 +281,29 @@ fn test_twitch_danmaku() {
                     }
                 }
             }
+        }
+    });
+}
+
+#[test]
+fn test_cc_danmaku() {
+    env_logger::init();
+    Builder::new_current_thread().enable_all().build().unwrap().block_on(async move {
+        let u = TestUrl::new();
+        let b = qliveplayer_lib::danmaku::cc::CC::new();
+        let dm_fifo = Arc::new(Mutex::new(LinkedList::<HashMap<String, String>>::new()));
+        let df1 = dm_fifo.clone();
+        tokio::spawn(async move {
+            match b.run(u.cc_live_url.as_ref(), df1).await {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("danmaku client error: {:?}", e);
+                }
+            };
+        });
+
+        loop {
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
     });
 }
